@@ -5,12 +5,18 @@ const SessionSchema = new mongoose.Schema({
     type: Number,
     default: Date.now(),
   },
+  ip: {
+    type: String,
+    require: false,
+  },
 });
 
 const Session = (module.exports = mongoose.model("Session", SessionSchema));
 
-module.exports.setNewSession = async () => {
-  const newSession = new Session();
+module.exports.setNewSession = async (ip) => {
+  const newSession = new Session({
+    ip,
+  });
   return await newSession.save();
 };
 

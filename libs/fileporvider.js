@@ -9,16 +9,13 @@ const rmdir = promisify(require("fs").rmdir);
 
 const saveFile = async (req, params) => {
   const { file } = req;
-  const { name } = req.params;
 
   await pipeline(
     file.stream,
-    fs.createWriteStream(
-      `${__dirname}/../${params.path}/${params.filename}${file.detectedFileExtension}`
-    )
+    fs.createWriteStream(`${__dirname}/../${params.path}/${params.filename}`)
   );
 
-  return `tmp/${name}/${params.filename}${file.detectedFileExtension}`;
+  return `tmp/productsImg/${params.filename}`;
 };
 
 const saveConvertedImg = async (params) => {
@@ -31,8 +28,21 @@ const saveConvertedImg = async (params) => {
     "-crop",
     `${params.width * 2}x${params.height * 2}+${params.x * 2}+${params.y * 2}`,
     "-resize",
-    `${params.width}x${params.height}`,
+    "50x50",
     params.finalPath + "/" + params.smallFileName,
+  ];
+
+  const paramsMediumArr = [
+    params.initPath,
+    "-resize",
+    `${params.width * 2}x${params.height * 2}^`,
+    "-resize",
+    `${Math.round(params.zoom * 100)}%`,
+    "-crop",
+    `${params.width * 2}x${params.height * 2}+${params.x * 2}+${params.y * 2}`,
+    "-resize",
+    `${params.width}x${params.height}`,
+    params.finalPath + "/" + params.mediumFileName,
   ];
 
   const paramsLargeArr = [
@@ -47,12 +57,14 @@ const saveConvertedImg = async (params) => {
   ];
 
   await convert(paramsSmallArr);
+  await convert(paramsMediumArr);
   await convert(paramsLargeArr);
 
   // await removeFile(params.initPath);
 
   return {
     small: `${params.output}/${params.smallFileName}`,
+    medium: `${params.output}/${params.mediumFileName}`,
     large: `${params.output}/${params.largeFileName}`,
   };
 };

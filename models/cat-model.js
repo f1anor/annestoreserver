@@ -31,6 +31,10 @@ module.exports.getAll = async () => {
   return await Category.find().sort({ number: 1 });
 };
 
+module.exports.findCat = async (title) => {
+  return await Category.findOne({ title });
+};
+
 module.exports.delete = async (number) => {
   await Category.deleteMany({ number });
   return await Category.updateMany(

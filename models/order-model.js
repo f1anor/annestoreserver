@@ -56,12 +56,40 @@ module.exports.addOrder = async (order) => {
   return await newOrder.save();
 };
 
-module.exports.getOrders = async (filter = {}, sort = { creationDate: -1 }) => {
-  return await Order.find(filter).sort(sort);
+module.exports.updateOrder = async (id, order) => {
+  const updatedOrder = await Order.findById(id);
+  updatedOrder.changeDate = Date.now();
+  updatedOrder.email = order.email;
+  updatedOrder.phone = order.phone;
+  updatedOrder.firstName = order.firstName;
+  updatedOrder.lastName = order.lastName;
+  updatedOrder.products = order.products.products;
+  updatedOrder.managerNotes = order.managerNotes.notes;
+
+  return await updatedOrder.save();
+};
+
+module.exports.getOrders = async (
+  filter = {},
+  sort = { creationDate: -1 },
+  search
+) => {
+  return await Order.find({ ...filter, ...search }).sort(sort);
 };
 
 module.exports.changeStatus = async (id, status) => {
   const order = await Order.findById(id);
   order.status = status;
   return await order.save();
+};
+
+module.exports.getOrderById = async (id) => {
+  return await Order.findById(id);
+};
+
+module.exports.findByProducts = async (idsArr) => {
+  return await Order.find({
+    "products.id": { $in: idsArr },
+    status: { $ne: "deleted" },
+  });
 };

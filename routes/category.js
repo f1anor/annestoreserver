@@ -4,35 +4,26 @@ const router = express.Router();
 const Category = require("../models/cat-model");
 const Product = require("../models/product-model");
 
-// router.get("/set", (req, res) => {
-//   const key = "key";
-//   const value = "value";
-//   const age = 1000 * 60 * 60 * 24 * 30;
-//   res.cookie(key, value, {
-//     maxAge: age,
-//     path: "/",
-//     // sameSite: "Lax",
-//   });
-
-//   // res.set("Access-Control-Allow-Origin", req.headers.origin);
-//   // res.set("Access-Control-Allow-Credentials", "true");
-//   // res.set(
-//   //   "Access-Control-Allow-Headers",
-//   //   "Origin, X-Requested-With, Content-Type, Accept"
-//   // );
-//   res.send({ message: "set cookie successs" });
-// });
-
-router.post("/", async (req, res) => {
+router.post("/", async (req, res, next) => {
   const { title } = req.body;
-  console.log(title);
 
-  const ans = await Category.addCat(title).catch((err) => {
-    res.json({ status: 1, message: err.message });
-    return;
+  const exist = await Category.findCat(title).catch((err) => {
+    next(err.message);
   });
 
-  if (!ans) return;
+  if (!!exist) {
+    next("Ошибка: Уже существует");
+    return;
+  }
+
+  const ans = await Category.addCat(title).catch((err) => {
+    next(err.message);
+  });
+
+  if (!ans) {
+    next("Ошибка: Не удалось добавить");
+    return;
+  }
 
   res.json({ status: 0 });
 });
