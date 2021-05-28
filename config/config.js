@@ -1,5 +1,10 @@
 module.exports = {
   productSearchProps: ["title"],
-  orderSearchProps: ["firstName", "lastName", "phone"],
+  orderSearchProps: ["name", "phone"],
   userSearchProps: [],
+  orderFilters: {
+    date: "creationDate",
+    price: "price",
+    delivery: "delivery",
+  },
 };

@@ -13,22 +13,32 @@ const CategorySchema = mongoose.Schema({
     type: Number,
     default: 0,
   },
+  date: {
+    type: String,
+    require: true,
+  },
 });
 
 const Category = (module.exports = mongoose.model("Category", CategorySchema));
 
 module.exports.addCat = async (title) => {
+  console.log(title);
   const last = await Category.findOne().sort({ number: -1 });
   const newCat = new Category({
     title,
     number: !!last ? last.number + 1 : 1,
+    date: Date.now(),
   });
 
   return await newCat.save();
 };
 
-module.exports.getAll = async () => {
-  return await Category.find().sort({ number: 1 });
+module.exports.getAll = async (title) => {
+  return await Category.find({
+    title: { $regex: `.*${title}.*`, $options: "i" },
+  }).sort({
+    number: 1,
+  });
 };
 
 module.exports.findCat = async (title) => {
@@ -62,5 +72,19 @@ module.exports.moveDown = async (number) => {
   );
 
   cat.number = cat.number + 1;
+  return await cat.save();
+};
+
+module.exports.getCatById = async (id) => {
+  console.log(id);
+  return await Category.findById(id);
+};
+
+module.exports.getCatByNum = async (num) => {
+  return await Category.findOne({ number: +num });
+};
+
+module.exports.rename = async (cat, name) => {
+  cat.title = name;
   return await cat.save();
 };

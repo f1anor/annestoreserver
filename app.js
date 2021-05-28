@@ -59,6 +59,7 @@ app.use((req, res, next) => {
 
 app.use("/api/1.0/statistic", require("./routes/statistic"));
 app.use("/api/1.0/category", require("./routes/category"));
+app.use("/api/1.0/comments", require("./routes/comments"));
 app.use("/api/1.0/product", require("./routes/product"));
 app.use("/api/1.0/orders", require("./routes/orders"));
 app.use("/api/1.0/users", require("./routes/users"));
@@ -68,7 +69,7 @@ app.use("/api/1.0/auth", require("./routes/auth"));
 
 app.use((err, req, res, next) => {
   console.log("H A N D L E  E R R O R ! ! !", err);
-  res.status(500);
+  // res.status(500);
   return res.json({ status: 1, message: err });
 });
 

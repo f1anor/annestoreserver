@@ -1,7 +1,8 @@
 const bcrypt = require("bcryptjs");
 
+const multerConfig = require("../config/multer");
+
 module.exports = (num, length = 3) => {
-  console.log(123123, num, length);
   if (num.toString().length >= length) {
     return num;
   } else {
@@ -28,24 +29,18 @@ module.exports.getPass = async (pwd) => {
   return status ? hash : false;
 };
 
-module.exports.getParams = (img) => {
+module.exports.getProductImgConvertParams = (img, prefix, id) => {
   return {
-    initPath: `${__dirname}/../public/${product[img].preloadedImg}`,
-    finalPath: `${__dirname}/../public/assets/products/${ans._id}`,
-    output: `assets/products/${ans._id}`,
-    smallFileName: `${img}Small.jpg`,
-    largeFileName: `${img}Large.jpg`,
-    zoom: product[img].zoom || 1,
-    x: product[img].x || 0,
-    y: product[img].y || 0,
-    width: product[img].width,
-    height: product[img].height,
-  };
-};
-
-module.exports.getNullImg = () => {
-  return {
-    small: null,
-    large: null,
+    initPath: `${multerConfig.core}${img.preloadImg}`,
+    finalPath: `${multerConfig.core}${multerConfig.assets}${id.toString()}`,
+    output: `${multerConfig.assets}${id}`,
+    smallFileName: `${prefix}_Small.jpg`,
+    mediumFileName: `${prefix}_Medium.jpg`,
+    largeFileName: `${prefix}_Large.jpg`,
+    zoom: img.zoom || 1,
+    x: img.x || 0,
+    y: img.y || 0,
+    width: img.width || 348,
+    height: img.height || 348,
   };
 };

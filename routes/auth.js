@@ -79,20 +79,21 @@ router.get(
   }
 );
 
+// FIXME: Переделать регистрацию
 router.post("/reg", async (req, res) => {
   const message = [];
   const values = req.body;
 
-  console.log(values);
+  console.log(123213, values);
 
-  const exist =
-    (await Admin.getByEmail(values.email)) ||
-    (await Admin.getByLogin(values.login));
+  // const exist =
+  //   (await Admin.getByEmail(values.email)) ||
+  //   (await Admin.getByLogin(values.login));
 
-  if (!!exist) {
-    message.push("Ошибка: Пользователь с такими данными уже существует");
-    return;
-  }
+  // if (!!exist) {
+  //   message.push("Ошибка: Пользователь с такими данными уже существует");
+  //   return;
+  // }
 
   if (message.length === 0) {
     values.pass = await getPass(values.pass).catch((err) => {
@@ -100,7 +101,6 @@ router.post("/reg", async (req, res) => {
       return;
     });
   }
-
   if (!values.pass) {
     message.push("Ошибка: Не удалось зашифровать пароль");
     return;
@@ -126,39 +126,39 @@ router.post("/reg", async (req, res) => {
       }
     );
 
-  const getParams = (img) => {
-    return {
-      initPath: `${__dirname}/../public/${values[img].preloadedImg}`,
-      finalPath: `${__dirname}/../public/assets/admins/${admin._id}`,
-      output: `assets/admins/${admin._id}`,
-      smallFileName: `${img}Small.jpg`,
-      mediumFileName: `${img}Medium.jpg`,
-      largeFileName: `${img}Large.jpg`,
-      zoom: values[img].zoom || 1,
-      x: values[img].x || 0,
-      y: values[img].y || 0,
-      width: values[img].width,
-      height: values[img].height,
-    };
-  };
+  // const getParams = (img) => {
+  //   return {
+  //     initPath: `${__dirname}/../public/${values[img].preloadedImg}`,
+  //     finalPath: `${__dirname}/../public/assets/admins/${admin._id}`,
+  //     output: `assets/admins/${admin._id}`,
+  //     smallFileName: `${img}Small.jpg`,
+  //     mediumFileName: `${img}Medium.jpg`,
+  //     largeFileName: `${img}Large.jpg`,
+  //     zoom: values[img].zoom || 1,
+  //     x: values[img].x || 0,
+  //     y: values[img].y || 0,
+  //     width: values[img].width,
+  //     height: values[img].height,
+  //   };
+  // };
 
-  let ava;
-  if (message.length === 0) {
-    if (!!values.avaImg) {
-      ava = await saveConvertedImg(getParams("avaImg")).catch((err) => {
-        message.push(err.message);
-      });
-    } else {
-      ava = getNullImg();
-    }
-  }
+  // let ava;
+  // if (message.length === 0) {
+  //   if (!!values.avaImg) {
+  //     ava = await saveConvertedImg(getParams("avaImg")).catch((err) => {
+  //       message.push(err.message);
+  //     });
+  //   } else {
+  //     ava = getNullImg();
+  //   }
+  // }
 
-  if (message.length === 0) {
-    await Admin.saveAvatar(admin, ava).catch((err) => {
-      message.push(err.message);
-      return;
-    });
-  }
+  // if (message.length === 0) {
+  //   await Admin.saveAvatar(admin, ava).catch((err) => {
+  //     message.push(err.message);
+  //     return;
+  //   });
+  // }
 
   if (message.length > 0) {
     if (!!admin) {

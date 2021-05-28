@@ -97,6 +97,11 @@ module.exports.saveProducts = async (products) => {
   );
 };
 
+module.exports.saveImgs = async (product, imgs) => {
+  product.imgs = imgs;
+  return await product.save();
+};
+
 module.exports.getProducts = async (sort, filter, search) => {
   return await ArchiveProduct.find({
     ...filter,
@@ -110,6 +115,10 @@ module.exports.getProductsByIds = async (ids) => {
 
 module.exports.deleteProducts = async (selected) => {
   return await ArchiveProduct.deleteMany({ _id: selected });
+};
+
+module.exports.deleteProduct = async (id) => {
+  return await ArchiveProduct.deleteOne({ _id: id });
 };
 
 module.exports.getImgFolder = async (id) => {
