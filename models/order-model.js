@@ -83,13 +83,26 @@ module.exports.addOrder = async (order) => {
 
 // Добавить в заметку в заказ
 module.exports.addNoteToOrder = async (id, values) => {
-  console.log(values);
   const order = await Order.findById(id);
   if (!order) throw new Error("Заказ не найден");
 
   if (!order.managerNotes) order.managerNotes = [];
 
   order.managerNotes.push({ ...values, date: Date.now() });
+  return await order.save();
+};
+
+// Удалить заметку из заказа
+module.exports.removeNote = async (id, time) => {
+  const order = await Order.findById(id);
+  if (!order) throw new Error("Заказ не найден");
+
+  if (!order.managerNotes) order.managerNotes = [];
+
+  order.managerNotes = order.managerNotes.filter(
+    (note) => +note.date !== +time
+  );
+
   return await order.save();
 };
 

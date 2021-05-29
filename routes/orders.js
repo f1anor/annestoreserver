@@ -142,16 +142,46 @@ router.get("/single/:id", async (req, res, next) => {
   }
 });
 
-router.get("/notes/:id", async (req, res, next) => {
+// Получить заметки из заказа
+router.get("/notes/:id/:position", async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id, position } = req.params;
     if (!id) throw new Error("ID заказа не найден");
 
     const order = await Order.getOrderById(id);
 
     if (!order) throw new Error("Ошибка: заказ с данным ID не найден в базе");
 
-    res.json({ status: 0, notes: order.managerNotes });
+    const userNotes = [];
+    const managerNotes = [];
+
+    order.userNotes.forEach((note) => {
+      userNotes.push({ ...note, type: "user" });
+    });
+
+    order.managerNotes.forEach((note) => {
+      managerNotes.push({ ...note, type: "admin" });
+    });
+
+    let notes = [];
+
+    switch (position) {
+      case "1":
+        notes = Object.assign(userNotes, managerNotes).sort(
+          (a, b) => a.date - b.date
+        );
+        break;
+      case "2":
+        notes = userNotes || [];
+        break;
+      case "3":
+        notes = managerNotes || [];
+        break;
+      default:
+        break;
+    }
+
+    res.json({ status: 0, notes: notes });
   } catch (err) {
     console.info(err);
     return next(err.message);
@@ -173,6 +203,22 @@ router.post("/addnote/:id", async (req, res, next) => {
   } catch (err) {
     console.info(err);
     return next(JSON.stringify({ comment: err.message }));
+  }
+});
+
+// Удалить заметку из заказа
+router.put("/removenote/:id/:time", async (req, res, next) => {
+  try {
+    const { id, time } = req.params;
+
+    if (!id || !time) throw new Error("Отсутствуют данные");
+
+    await Order.removeNote(id, time);
+
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
   }
 });
 
