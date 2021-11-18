@@ -42,7 +42,7 @@ const urlencodedParser = bodyParser.urlencoded({
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cookieParser("loremIpsum"));
 
-const port = 3001;
+const PORT = process.env.PORT || 80;
 
 app.use(passport.initialize());
 require("./libs/passport")(passport);
@@ -82,6 +82,6 @@ app.use((err, req, res, next) => {
 
 // Запускаем сервер
 
-app.listen(port, () => {
+app.listen(PORT, () => {
   console.info("Server start on port 3001");
 });
