@@ -12,7 +12,7 @@ module.exports = (passport) => {
   opts.secretOrKey = secret;
 
   const strategy = new JwtStrategy(opts, async function (jwt_payload, next) {
-    // console.log("payload received", jwt_payload);
+    // console.info("payload received", jwt_payload);
     // usually this would be a database call:
     const user = await Admin.findById(jwt_payload._id);
     if (user) {

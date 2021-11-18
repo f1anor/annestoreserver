@@ -48,8 +48,8 @@ const CommentsSchema = mongoose.Schema({
 });
 
 const ProductSchema = mongoose.Schema({
-  time: {
-    type: Date,
+  date: {
+    type: Number,
     require: true,
   },
   active: {
@@ -105,7 +105,7 @@ const Comment = mongoose.model("Comment", CommentsSchema);
 
 module.exports.addProduct = async (product) => {
   const newProduct = new Product({
-    time: Date.now(),
+    date: Date.now(),
     amount: product.amount,
     active: product.active,
     title: product.title,
@@ -144,10 +144,6 @@ module.exports.saveImgs = async (product, imgsArr) => {
   product.imgs = imgsArr;
 
   return await product.save();
-};
-
-module.exports.deleteProducts = async (selected) => {
-  return await Product.deleteMany({ _id: selected });
 };
 
 module.exports.deleteProduct = async (id) => {
@@ -344,4 +340,8 @@ module.exports.removeCategory = async (cat) => {
   });
 
   return await Promise.all(products.map((prod) => prod.save()));
+};
+
+module.exports.getAllIds = async () => {
+  return await Product.find({}, { _id: 1 });
 };

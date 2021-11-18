@@ -32,7 +32,7 @@ router.get("/:id?", async (req, res, next) => {
 
     res.json({ status: 0, data });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -41,7 +41,7 @@ router.post("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const values = req.body;
-    console.log(values);
+    console.info(values);
     const product = await Product.getProductById(id);
     if (!product) throw new Error("Ошибка: Продукт не найден");
 
@@ -49,7 +49,7 @@ router.post("/:id", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -61,7 +61,7 @@ router.put("/:id", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -73,7 +73,7 @@ router.delete("/:id", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -87,7 +87,7 @@ router.delete("/ans/:id", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -97,13 +97,13 @@ router.put("/ans/:id", async (req, res, next) => {
     const { id } = req.params;
     const values = req.body;
 
-    console.log(id, values);
+    console.info(id, values);
 
     await Product.addAns(id, values.content);
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });

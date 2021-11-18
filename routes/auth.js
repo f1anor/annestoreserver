@@ -9,52 +9,54 @@ const multer = require("multer");
 const upload = multer();
 const multerConfig = require("../config/multer");
 
-const { getPass, getNullImg } = require("../utlis/utils");
+const {
+  getPass,
+  getNullImg,
+  getAvatarImgConvertParams,
+} = require("../utlis/utils");
 
 const {
   removeFilesFromFolder,
   saveConvertedImg,
   mkDir,
   saveFile,
+  removeDir,
 } = require("../libs/fileporvider");
 
-router.post("/preloadimg/:name", upload.single("myImage"), async (req, res) => {
-  const message = [];
-  const { name } = req.params;
+// Готово - Предзагрузить аватар
+router.post(
+  "/preloadimg/:name",
+  upload.single("myImage"),
+  async (req, res, next) => {
+    try {
+      const { name } = req.params;
 
-  const fileParams = {
-    filename: `tmp_${name}`,
-    path: `${multerConfig.tmpImgs}/${name}`,
-  };
+      // имя и пути до папки public и до папки с временными аватарами
+      const fileParams = {
+        filename: `tmp_${name}`,
+        core: multerConfig.core,
+        path: multerConfig.tmpAvatars,
+      };
 
-  console.log(name, fileParams);
+      // Удаляем все файлы в папке сохранения временных аватаров
+      const remove = await removeFilesFromFolder(
+        `${fileParams.core}${fileParams.path}`
+      );
 
-  const remove = await removeFilesFromFolder(fileParams.path).catch((err) => {
-    message.push(err.message);
-  });
-  if (!remove) {
-    message.push("Ошибка: Не удалось завершить операцию");
-  }
+      if (!remove) throw new Erorr("Ошибка: Не удалось завершить операцию");
 
-  let file;
-  if (message.length === 0) {
-    file = await saveFile(req, fileParams).catch((err) => {
-      message.push(err.message);
-      return;
-    });
+      // Сохраняем изображение и возвращаем путь до него
+      const file = await saveFile(req, fileParams);
 
-    if (!file) {
-      message.push("Ошибка: Не удалось сохранить файл");
+      if (!file) throw new Error("Ошибка: Не удалось сохранить файл");
+
+      res.json({ status: 0, file });
+    } catch (err) {
+      console.info(err);
+      return next(err.message);
     }
   }
-
-  if (message.length > 0) {
-    res.json({ status: 1, message: message[0] });
-    return;
-  }
-
-  res.json({ status: 0, file });
-});
+);
 
 router.get(
   "/",
@@ -80,99 +82,93 @@ router.get(
 );
 
 // FIXME: Переделать регистрацию
-router.post("/reg", async (req, res) => {
-  const message = [];
-  const values = req.body;
+router.post("/reg", async (req, res, next) => {
+  try {
+    const testCode = "563256";
+    const values = req.body;
 
-  console.log(123213, values);
+    // Перепроверяем данные
 
-  // const exist =
-  //   (await Admin.getByEmail(values.email)) ||
-  //   (await Admin.getByLogin(values.login));
+    // Повторно перепроверяем код приглашения
+    if (!values.code !== !testCode)
+      throw new Error(
+        JSON.stringify({ stage: "firstStage", code: "Неверный код" })
+      );
 
-  // if (!!exist) {
-  //   message.push("Ошибка: Пользователь с такими данными уже существует");
-  //   return;
-  // }
+    // Если поле логина пустое - вываливаемся в обшику
+    if (!values.login)
+      throw new Error(
+        JSON.stringify({ stage: "secondStage", login: "Некорректные данные" })
+      );
 
-  if (message.length === 0) {
-    values.pass = await getPass(values.pass).catch((err) => {
-      message.push(err.message);
-      return;
-    });
-  }
-  if (!values.pass) {
-    message.push("Ошибка: Не удалось зашифровать пароль");
-    return;
-  }
+    // Повторно проверяем существует ли пользователь
+    if (!!(await Admin.getByLogin(values.login)))
+      throw new Error(
+        JSON.stringify({
+          stage: "secondStage",
+          login: "Пользователь существует",
+        })
+      );
 
-  let admin;
-  if (message.length === 0) {
-    admin = await Admin.addAdmin(values).catch((err) => {
-      message.push(err.message);
-      return;
-    });
-  }
+    if (!values.password || values.password.length < 8)
+      throw new Error(
+        JSON.stringify({
+          stage: "secondStage",
+          password: "Некорректные данные",
+        })
+      );
 
-  if (!admin) {
-    message.push("Ошибка: Не удалось создать пользователя");
-    return;
-  }
+    if (
+      !values.rePassword ||
+      values.password.toString() !== values.rePassword.toString()
+    )
+      throw new Error(
+        JSON.stringify({
+          stage: "secondStage",
+          rePassword: "Пароли не совпадают",
+        })
+      );
 
-  if (message.length === 0)
-    await mkDir(`${__dirname}/../public/assets/admins/${admin._id}`).catch(
-      (err) => {
-        message.push(err.message);
-      }
+    // Повторно проверяем существует ли пользователь с таким email
+    if (!!(await Admin.getByEmail(values.email)))
+      throw new Error(
+        JSON.stringify({
+          stage: "thirdStage",
+          email: "Пользователь с таким email уже существует",
+        })
+      );
+
+    // Создаем зашифрованный пароль
+    values.password = await getPass(values.password);
+
+    // Добавляем пользователя в базу (временно без аватарки)
+    const admin = await Admin.addAdmin(values);
+
+    if (!admin) throw new Error("Не удалось создать пользователя");
+
+    // Создаем папку пользователя
+    await mkDir(`${multerConfig.core}${multerConfig.users}${admin._id}`);
+
+    // Конвертируем и сохраняем изображения в папку администратора
+    const saved = await saveConvertedImg(
+      getAvatarImgConvertParams(values.avatarTmp, admin._id)
     );
 
-  // const getParams = (img) => {
-  //   return {
-  //     initPath: `${__dirname}/../public/${values[img].preloadedImg}`,
-  //     finalPath: `${__dirname}/../public/assets/admins/${admin._id}`,
-  //     output: `assets/admins/${admin._id}`,
-  //     smallFileName: `${img}Small.jpg`,
-  //     mediumFileName: `${img}Medium.jpg`,
-  //     largeFileName: `${img}Large.jpg`,
-  //     zoom: values[img].zoom || 1,
-  //     x: values[img].x || 0,
-  //     y: values[img].y || 0,
-  //     width: values[img].width,
-  //     height: values[img].height,
-  //   };
-  // };
-
-  // let ava;
-  // if (message.length === 0) {
-  //   if (!!values.avaImg) {
-  //     ava = await saveConvertedImg(getParams("avaImg")).catch((err) => {
-  //       message.push(err.message);
-  //     });
-  //   } else {
-  //     ava = getNullImg();
-  //   }
-  // }
-
-  // if (message.length === 0) {
-  //   await Admin.saveAvatar(admin, ava).catch((err) => {
-  //     message.push(err.message);
-  //     return;
-  //   });
-  // }
-
-  if (message.length > 0) {
-    if (!!admin) {
-      await Admin.removeAdmin(admin._id);
+    // Если сконвертировать и сохранить не удалось - удаляем администратора и его папку
+    if (!saved) {
+      removeDir(`${multerConfig.core}${multerConfig.users}${admin._id}`);
+      Admin.removeAdmin(admin._id);
+      throw new Error("Не удалось сохранить изображение");
     }
 
-    res.json({
-      status: 1,
-      message: message[0],
-    });
-    return;
-  }
+    // Сохряняем пути до изображений в администратора
+    await Admin.saveAvatar(admin, saved);
 
-  res.json({ status: 0 });
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
 });
 
 router.put("/", async (req, res) => {
@@ -205,6 +201,60 @@ router.put("/", async (req, res) => {
   });
 
   res.json({ status: 0, token });
+});
+
+// Проверить код приглашения в первом шаге регистрации
+// TODO: сделать так чтобы код брался из базы данных
+router.post("/firststage", async (req, res, next) => {
+  try {
+    const testCode = "563256";
+    const { code } = req.body;
+
+    if (+code.join("") !== +testCode)
+      throw new Error(JSON.stringify({ code: "Неверный код!" }));
+
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Проверить логин во втором шаге регистрации
+router.post("/secondstage", async (req, res, next) => {
+  try {
+    const { login } = req.body;
+    if (!login)
+      throw new Error(JSON.stringify({ login: "Некорректные данные" }));
+
+    const exist = await Admin.getByLogin(login);
+
+    if (!!exist) throw new Error("Пользователь уже существует");
+
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+router.post("/thirdstage", async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email)
+      throw new Error(JSON.stringify({ email: "Некорректные данные" }));
+
+    const exist = await Admin.getByEmail(email);
+
+    if (!!exist)
+      throw new Error(JSON.stringify({ email: "Пользователь существует" }));
+
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
 });
 
 module.exports = router;

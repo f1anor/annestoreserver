@@ -79,7 +79,7 @@ module.exports.addAdmin = async (values) => {
     registerDate: Date.now(),
     phone: values.phone,
     email: values.email,
-    password: values.pass,
+    password: values.password,
   });
 
   return await newAdmin.save();

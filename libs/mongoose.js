@@ -13,11 +13,11 @@ mongoose.connect(config.db, {
 autoIncrement.initialize(mongoose.connections[0]);
 
 mongoose.connection.on("connected", () => {
-  console.log(`Connected to ${config.db}`);
+  console.info(`Connected to ${config.db}`);
 });
 
 mongoose.connection.on("error", (err) => {
-  console.log(`DB connection error: ${err}`);
+  console.info(`DB connection error: ${err}`);
 });
 
 module.exports = mongoose;

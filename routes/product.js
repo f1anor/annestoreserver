@@ -7,6 +7,7 @@ const multer = require("multer");
 const upload = multer();
 const multerConfig = require("../config/multer");
 const formatNumber = require("../utlis/utils");
+const formatArticle = require("../utlis/utils").formatArticle;
 const getProductImgConvertParams =
   require("../utlis/utils").getProductImgConvertParams;
 
@@ -24,6 +25,48 @@ const Product = require("../models/product-model");
 const ArchiveProduct = require("../models/archive-product-model");
 const Order = require("../models/order-model");
 
+//Готово - Проверить айдишники на наличие пассивных
+router.post("/checkactive", async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!ids && ids.length === 0)
+      throw new Error("Ошибка: Нужен хотя бы один элемент");
+
+    const products = await Promise.all(
+      ids.map((id) => Product.getProductById(id))
+    );
+
+    let message = "";
+
+    products.forEach((product) => {
+      if (!product.active)
+        message += `Продукт #${formatArticle(
+          product._id,
+          5
+        )} имеет статус "пассивный" </br>`;
+    });
+
+    if (message.length > 0) throw new Error(message);
+
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err.message);
+    next(err.message);
+  }
+});
+
+//Готово - получить все айдишники всех продуктов (кроме архива)
+router.get("/allids", async (req, res, next) => {
+  try {
+    const ids = await Product.getAllIds();
+
+    res.json({ status: 0, ids });
+  } catch (err) {
+    console.info(err);
+    next(err.message);
+  }
+});
+
 router.get("/check/:article", async (req, res, next) => {
   try {
     const { article } = req.params;
@@ -40,6 +83,7 @@ router.get("/check/:article", async (req, res, next) => {
   }
 });
 
+// TODO: Сделать так чтобы временные изображения удалялись
 //Предзагрузить изображения
 router.post(
   "/preloadimg/:name",
@@ -49,20 +93,22 @@ router.post(
       const { name } = req.params;
       const fileParams = {
         filename: `tmp_${name}`,
-        path: `${multerConfig.core}${multerConfig.tmpImgs}`,
+        core: multerConfig.core,
+        path: multerConfig.tmpImgs,
       };
 
       const file = await saveFile(req, fileParams);
 
       res.json({ status: 0, file });
     } catch (err) {
-      console.log(err);
+      console.info(err);
       next(err.message);
     }
   }
 );
 
 //Добавить продукт
+// FIXME: Поменять пути с прописанных вручную на автоматические из конфига
 router.post("/", async (req, res, next) => {
   try {
     const product = req.body;
@@ -94,7 +140,7 @@ router.post("/", async (req, res, next) => {
 
     res.json({ status: 0, success: 1 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -103,8 +149,6 @@ router.post("/", async (req, res, next) => {
 router.get("/", async (req, res) => {
   const message = [];
   const { page, size = 1, sort, dir, filter, search = "" } = req.query;
-
-  console.log(size);
 
   const searchProps = {
     $or: [
@@ -143,7 +187,6 @@ router.get("/", async (req, res) => {
 router.get("/archive", async (req, res) => {
   const message = [];
   const { page, size = 1, sort, dir, filter, search = "" } = req.query;
-
   const searchProps = {
     $or: [
       ...productSearchProps.map((prop) => ({
@@ -178,35 +221,32 @@ router.get("/archive", async (req, res) => {
   });
 });
 
-//Удалить продукты из архива
+//Готово - Удалить продукты из архива
 router.post("/delete", async (req, res, next) => {
-  const { selected = [] } = req.body;
+  try {
+    const { selected = [] } = req.body;
 
-  if (selected.length === 0) next("Ошибка: Продукт не выбран");
+    if (selected.length === 0) throw new Error("Ошибка: Продукт не выбран");
 
-  const folders = await Promise.all(
-    selected.map((id) => ArchiveProduct.getImgFolder(id))
-  ).catch((err) => {
+    //Удаляем папки с изображениями
+    await Promise.all(
+      selected.map((item) =>
+        removeDir(`${multerConfig.core}${multerConfig.assetsArchive}${item}`)
+      )
+    );
+
+    const ans = await ArchiveProduct.deleteProducts(selected);
+
+    const success = ans.deletedCount === selected.length;
+    if (!success) {
+      throw new Error("Ошибка: Не все удалось удалить!");
+    }
+
+    res.json({ status: 0, success });
+  } catch (err) {
+    console.info(err);
     next(err.message);
-  });
-
-  await Promise.all(folders.map((path) => removeDir(path)))
-    .then((values) => console.log(values))
-    .catch((err) => {
-      next(err.message);
-      return;
-    });
-
-  const ans = await ArchiveProduct.deleteProducts(selected).catch((err) =>
-    next(err.message)
-  );
-
-  const success = ans.deletedCount === selected.length;
-  if (!success) {
-    next("Ошибка: Не все удалось удалить!");
   }
-
-  res.json({ status: 0, success });
 });
 
 //Готово - переместить продукты в архив
@@ -260,7 +300,7 @@ router.post("/toarchive", async (req, res, next) => {
         await ArchiveProduct.saveImgs(item, imgs);
       } catch (err) {
         ArchiveProduct.deleteProduct(item._id).catch((err) =>
-          console.log(err.message)
+          console.info(err.message)
         );
         throw err;
       }
@@ -278,7 +318,7 @@ router.post("/toarchive", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -323,7 +363,7 @@ router.post("/restore", async (req, res) => {
         // const imgs = await moveImgs(item.imgs, multerConfig.assets, "products");
         await Product.saveImgs(item, imgs);
       } catch (err) {
-        Product.deleteProduct(item._id).catch((err) => console.log(err));
+        Product.deleteProduct(item._id).catch((err) => console.info(err));
         throw err;
       }
     }
@@ -338,7 +378,7 @@ router.post("/restore", async (req, res) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -373,7 +413,7 @@ router.get("/update/:id", async (req, res, next) => {
 
         imgs.push(movedFiles);
       } catch (err) {
-        console.log("ERROR", err.message);
+        console.info("ERROR", err.message);
         throw err;
       }
     }
@@ -382,7 +422,7 @@ router.get("/update/:id", async (req, res, next) => {
 
     res.json({ status: 0, product: { ...product, imgs: imgs } });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -402,7 +442,7 @@ router.get("/:art", async (req, res, next) => {
 
 //Поменять статус продукта
 router.put("/status", async (req, res, next) => {
-  console.log(req.body);
+  console.info(req.body);
   const { id, status } = req.body;
 
   await Product.toggleStatus(id, status).catch((err) => {
@@ -427,7 +467,8 @@ router.post("/edit", async (req, res, next) => {
       `${multerConfig.core}${multerConfig.assets}/${id}`
     );
 
-    const { imgs } = fields;
+    const imgs = fields.imgs.sort((a, b) => a.id - b.id);
+
     const movedImgs = [];
 
     let counter = 0;
@@ -452,7 +493,7 @@ router.post("/edit", async (req, res, next) => {
         }
         counter = counter + 1;
       } catch (err) {
-        console.log("Ошибка при переносе", err);
+        console.info("Ошибка при переносе", err);
         throw err;
       }
     }
@@ -460,7 +501,7 @@ router.post("/edit", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });

@@ -32,8 +32,8 @@ const CommentsSchema = mongoose.Schema({
 });
 
 const ArchiveProductSchema = mongoose.Schema({
-  time: {
-    type: Date,
+  date: {
+    type: Number,
     require: true,
   },
   views: {

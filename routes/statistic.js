@@ -2,12 +2,13 @@ const express = require("express");
 const Session = require("../models/session-model");
 const Order = require("../models/order-model");
 const pagination = require("../utlis/pagination");
+const User = require("../models/user-model");
+const Product = require("../models/product-model");
 
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  let { range = "week", time, page = 1 } = req.query;
-  const pagesize = 10;
+  let { range = "week", time } = req.query;
 
   const date = new Date(+time || Date.now());
   !!time && date.setDate(date.getDate() + 1);
@@ -94,7 +95,9 @@ router.get("/", async (req, res) => {
         }
         date.setDate(date.getDate() - i);
 
-        const day = date.toLocaleString("ru", { weekday: "long" });
+        const day = date.toLocaleString("ru", {
+          weekday: "short",
+        });
 
         const min = date.getTime();
         const max = min + 86400000 - 1;
@@ -120,10 +123,11 @@ router.get("/", async (req, res) => {
       timeArr.reverse();
       break;
     }
-    case "month": {
-      date.setMonth(date.getMonth() - 1);
+    case "all": {
+      const now = date.getTime();
+      date.setDate(date.getDate() - 14);
       const period = {
-        min: date.getTime(),
+        min: now - (now - date.getTime()),
         max: now,
       };
 
@@ -134,25 +138,19 @@ router.get("/", async (req, res) => {
         creationDate: { $gte: period.min, $lte: period.max },
       });
 
-      let currentDate = new Date(+time || Date.now());
-      let pastMonthLastDate = new Date(+time || Date.now());
-      if (time) {
-        date.setDate(date.getDate() - 1);
-      }
-      currentDate = currentDate.getDate();
-      pastMonthLastDate.setDate(0);
-      pastMonthLastDate = pastMonthLastDate.getDate();
-
-      for (
-        let i = 0;
-        i <= currentDate + (pastMonthLastDate - currentDate);
-        i++
-      ) {
+      for (let i = 0; i < 14; i++) {
+        const date = new Date(+time || Date.now());
         if (!time) {
           date.setHours(0);
           date.setMinutes(0);
           date.setSeconds(0);
         }
+        date.setDate(date.getDate() - i);
+
+        const day = date.toLocaleString("ru", {
+          weekday: "short",
+        });
+
         const min = date.getTime();
         const max = min + 86400000 - 1;
 
@@ -168,21 +166,202 @@ router.get("/", async (req, res) => {
             makedOrders++;
         });
 
-        timeArr.push({ time: date.getDate(), visitors, makedOrders });
-        date.setDate(date.getDate() + 1);
+        timeArr.push({
+          time: day,
+          visitors,
+          makedOrders,
+        });
       }
+      timeArr.reverse();
       break;
     }
   }
 
-  const sessionsOnPage = pagination(sessions, page, pagesize);
-
   res.json({
     status: 0,
     data: timeArr,
-    sessionsOnPage,
-    totalCount: sessions.length,
   });
+});
+
+// Получить количество всех пользователей. Посчитать прирост за неделю в %
+router.get("/userscount", async (req, res, next) => {
+  try {
+    const allUsers = await User.getUsers();
+
+    const lastWeekUsers = await User.getUsers({
+      date: {
+        $gt: Date.now() - 6048000000,
+      },
+    });
+
+    res.json({
+      status: 0,
+      users: {
+        all: allUsers.length,
+        last:
+          allUsers.length !== 0
+            ? (lastWeekUsers.length * 100) / allUsers.length
+            : 0,
+      },
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Получить количество всех продуктов. Посчитать прирост за неделю в %
+router.get("/productscount", async (req, res, next) => {
+  try {
+    const allProducts = await Product.getProducts();
+    const lastProducts = await Product.getProducts(null, {
+      date: {
+        $gt: Date.now() - 6048000000,
+      },
+    });
+
+    res.json({
+      status: 0,
+      products: {
+        all: allProducts.length,
+        last:
+          allProducts.length !== 0
+            ? (lastProducts.length * 100) / allProducts.length
+            : 0,
+      },
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Получить количество всех заказов. Посчитать прирост за неделю в %
+router.get("/orderscount", async (req, res, next) => {
+  try {
+    const allOrders = await Order.getOrders();
+    const lastOrders = await Order.getOrders({
+      creationDate: {
+        $gt: Date.now() - 6048000000,
+      },
+    });
+
+    res.json({
+      status: 0,
+      orders: {
+        all: allOrders.length,
+        last:
+          allOrders.length !== 0
+            ? (lastOrders.length * 100) / allOrders.length
+            : 0,
+      },
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Получить всю прибыль с выполненных заказов. Посчитать прирост прибыли за неделю
+router.get("/totalcash", async (req, res, next) => {
+  try {
+    const allComplitedOrders = await Order.getOrders({ status: "completed" });
+
+    const allTotalCash = allComplitedOrders.reduce(
+      (previusValue, currentValue) => {
+        return previusValue + (currentValue.price - currentValue.deliveryPrice);
+      },
+      0
+    );
+
+    const lastComplitedOrders = await Order.getOrders({
+      status: "completed",
+      creationDate: {
+        $gt: Date.now() - 6048000000,
+      },
+    });
+
+    const lastTotalCash = lastComplitedOrders.reduce(
+      (previusValue, currentValue) => {
+        return previusValue + (currentValue.price - currentValue.deliveryPrice);
+      },
+      0
+    );
+
+    res.json({
+      status: 0,
+      cash: {
+        all: allTotalCash,
+        last: allTotalCash !== 0 ? (lastTotalCash * 100) / allTotalCash : 0,
+      },
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Получить статистику по платформам
+router.get("/platform", async (req, res, next) => {
+  try {
+    // Здесь будут все платформы с количеством заходов в каждую
+    const platforms = {};
+
+    // Получаем все сессии из базы
+    const sessions = await Session.getSessions();
+    // Перебираем сессии и считаем все платформы
+    sessions.forEach((session) => {
+      if (platforms.hasOwnProperty(session.platform)) {
+        platforms[session.platform] += 1;
+      } else {
+        platforms[session.platform] = 1;
+      }
+    });
+
+    // Сумма всех заходов на всех платформах
+    const sum = Object.values(platforms).reduce((prev, next) => prev + next, 0);
+
+    // Здесь будут все платформы с процентами по заходам
+    const details = {};
+
+    for (const key in platforms) {
+      details[key] = +((platforms[key] * 100) / sum).toFixed(1);
+    }
+
+    res.json({
+      status: 0,
+      platformStatistic: {
+        global: {
+          Desktop: 30,
+          Mobile: 70,
+        },
+        details,
+      },
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Получить сессии для таблицы
+router.get("/sessions/:page", async (req, res, next) => {
+  try {
+    const { page } = req.params;
+
+    const sessions = await Session.getSessions();
+
+    const sessionsOnPage = pagination(sessions, page, 4);
+
+    res.json({
+      status: 0,
+      sessions: sessionsOnPage,
+      totalCount: sessions.length,
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
 });
 
 module.exports = router;

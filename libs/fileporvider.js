@@ -8,20 +8,21 @@ const pipeline = promisify(require("stream").pipeline);
 const rmdir = promisify(require("fs").rmdir);
 const multerConfig = require("../config/multer");
 
+// Просто сохранить файл с клиента в исходном виде
 const saveFile = async (req, params) => {
   const { file } = req;
 
   await pipeline(
     file.stream,
-    fs.createWriteStream(`${params.path}/${params.filename}`)
+    fs.createWriteStream(`${params.core}${params.path}/${params.filename}`)
   );
 
-  console.log("Файл сохранен ", params.filename);
-  return `tmp/productsImg/${params.filename}`;
+  console.info("Файл сохранен ", params.filename);
+  return `${params.path}/${params.filename}`;
 };
 
 const saveConvertedImg = async (params) => {
-  console.log(params);
+  console.info(params);
   const paramsSmallArr = [
     params.initPath,
     "-resize",
@@ -79,7 +80,7 @@ const removeFilesFromFolder = async (path) => {
   const files = (await getFile(path)) || [];
 
   await Promise.all(files.map((file) => removeFile(`${path}/${file}`)));
-  console.log("Файлы из папки удалены");
+  console.info("Файлы из папки удалены");
   return true;
 };
 
@@ -125,13 +126,13 @@ const moveImgs = async (imgs, path, id, index) => {
     };
   } catch (err) {
     await removeFile(`${multerConfig.core}${imgs.large}`).catch((err) =>
-      console.log("Ошибка: Удаляемый файл не найден")
+      console.info("Ошибка: Удаляемый файл не найден")
     );
     await removeFile(`${multerConfig.core}${imgs.medium}`).catch((err) =>
-      console.log("Ошибка: Удаляемый файл не найден")
+      console.info("Ошибка: Удаляемый файл не найден")
     );
     await removeFile(`${multerConfig.core}${imgs.small}`).catch((err) =>
-      console.log("Ошибка: Удаляемый файл не найден")
+      console.info("Ошибка: Удаляемый файл не найден")
     );
     throw err;
   }
@@ -153,7 +154,7 @@ const copyFile = async (from, to) => {
   if (!from) throw new Error("Ошибка: Отсутствует путь к исходному файлу");
   if (!to) throw new Error("Ошибка: Отсутствует путь к целевому файлу");
 
-  console.log(from, fs.existsSync(from));
+  console.info(from, fs.existsSync(from));
 
   if (fs.existsSync(from)) {
     return await fs.createReadStream(from).pipe(fs.createWriteStream(to));

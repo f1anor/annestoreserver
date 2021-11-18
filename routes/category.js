@@ -6,21 +6,20 @@ const Product = require("../models/product-model");
 
 router.post("/", async (req, res, next) => {
   try {
-    const { name } = req.body;
-    if (!name) throw new Error("Ошибка: Необходимо уникальное имя");
+    const cat = req.body;
+    if (!cat.title)
+      throw new Error(JSON.stringify({ title: "Необходимо уникальное имя" }));
 
-    const exist = await Category.findCat(name).catch((err) => {
+    const exist = await Category.findCat(cat.title).catch((err) => {
       next(err.message);
     });
 
     if (!!exist)
       throw new Error(
-        JSON.stringify({ name: "Категория с данным именем уже существует" })
+        JSON.stringify({ title: "Категория с данным именем уже существует" })
       );
 
-    const ans = await Category.addCat(name).catch((err) => {
-      next(err.message);
-    });
+    const ans = await Category.addCat(cat);
 
     if (!ans) {
       throw new Error("Ошибка: Не удалось добавить");
@@ -33,6 +32,24 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+//Готово - Предзагрузить категорию для редактирования
+router.get("/fetchedit/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    console.log(id);
+
+    const ans = await Category.getCatById(id);
+
+    if (!ans) throw new Error("Ошибка: Категории не существует");
+
+    res.json({ status: 0, cat: ans });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+//Готово - Получить все категории
 router.get("/", async (req, res, next) => {
   try {
     const { search } = req.query;
@@ -51,6 +68,7 @@ router.get("/", async (req, res, next) => {
   }
 });
 
+//Готово - Удалить категорию
 router.delete("/:number", async (req, res, next) => {
   try {
     const { number } = req.params;
@@ -69,6 +87,7 @@ router.delete("/:number", async (req, res, next) => {
   }
 });
 
+//Переместить выбранную категорию на единицу выше
 router.put("/up/:number", async (req, res) => {
   const { number } = req.params;
 
@@ -81,6 +100,7 @@ router.put("/up/:number", async (req, res) => {
   res.json({ status: 0 });
 });
 
+//Пеоемесьтьб выбранную категорию на единцу ниже
 router.put("/down/:number", async (req, res) => {
   const { number } = req.params;
 
@@ -93,30 +113,46 @@ router.put("/down/:number", async (req, res) => {
   res.json({ status: 0 });
 });
 
-router.put("/rename/:id", async (req, res, next) => {
+// TODO: Доделать обновление категории в продуктах
+router.put("/edit/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const cat = req.body;
 
-    const exist = await Category.findCat(name);
+    const exist = await Category.findCat(cat.name);
     if (!!exist)
       throw new Error(
-        JSON.stringify({ name: "Категория с данным именем уже существует" })
+        JSON.stringify({ title: "Категория с данным именем уже существует" })
       );
 
-    const cat = await Category.getCatById(id);
-    if (!cat)
+    const ans = await Category.getCatById(id);
+    if (!ans)
       throw new Error(
-        JSON.stringify({ name: "Исходная категория не найдена" })
+        JSON.stringify({ title: "Исходная категория не найдена" })
       );
 
-    await Product.renameCategory(cat.title, name);
-    await Category.rename(cat, name);
+    // FIXME: Сделать так чтобы данные категории также менялись и в продуктах
+    // await Product.renameCategory(cat.title, name);
+    await Category.editCategory(ans, cat);
 
     res.json({ status: 0 });
   } catch (err) {
-    next(err.message);
-    return;
+    console.info(err);
+    return next(err.message);
+  }
+});
+
+// Поменять позицию категории в списке
+router.put("/setposition/:start/:finish", async (req, res, next) => {
+  try {
+    const { start, finish } = req.params;
+
+    await Category.setPositions(start, finish);
+
+    res.json({ status: 0 });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
   }
 });
 

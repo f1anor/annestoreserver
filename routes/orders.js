@@ -8,6 +8,22 @@ const pagination = require("../utlis/pagination");
 const compareOrdersFilters =
   require("../utlis/generateFilters").compareOrdersFilters;
 
+// Получить последние заказы
+router.get("/last", async (req, res, next) => {
+  try {
+    //TODO: проверить на сколько нужно именно новые заказы показывать
+    // const orders = await Order.getOrders({ status: "new" });
+    const orders = await Order.getOrders();
+    // Количество возвращаемых заказов
+    if (orders.length > 4) orders.length = 4;
+
+    res.json({ status: 0, orders });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
+  }
+});
+
 // Получить заказы
 router.get("/:status", async (req, res, next) => {
   try {
@@ -32,8 +48,6 @@ router.get("/:status", async (req, res, next) => {
       checkedFilters.status = status;
     }
 
-    console.log(checkedFilters);
-
     const searchProps = {
       $or: [
         ...orderSearchProps.map((prop) => ({
@@ -55,7 +69,7 @@ router.get("/:status", async (req, res, next) => {
       orders: ordersOnPage,
     });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -118,7 +132,7 @@ router.delete("/:id", async (req, res, next) => {
 
     res.json({ status: 0 });
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -135,9 +149,9 @@ router.get("/single/:id", async (req, res, next) => {
     if (!order) throw new Error("Ошибка: заказ с данным ID не найден в базе");
 
     res.json({ status: 0, order });
-    console.log(order);
+    console.info(order);
   } catch (err) {
-    console.log(err);
+    console.info(err);
     return next(err.message);
   }
 });
@@ -193,7 +207,7 @@ router.post("/addnote/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const values = req.body;
-    console.log(values);
+    console.info(values);
     if (!id)
       throw new Error(JSON.stringify({ comment: "ID заказа не найден" }));
 

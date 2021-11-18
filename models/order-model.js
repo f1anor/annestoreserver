@@ -126,6 +126,7 @@ module.exports.updateOrder = async (id, order) => {
   return await updatedOrder.save();
 };
 
+// Получить все заказы с фильтрами сортировкой и поиском
 module.exports.getOrders = async (
   filter = {},
   sort = { creationDate: -1 },
