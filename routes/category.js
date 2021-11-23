@@ -36,7 +36,6 @@ router.post("/", async (req, res, next) => {
 router.get("/fetchedit/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    console.log(id);
 
     const ans = await Category.getCatById(id);
 
