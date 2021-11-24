@@ -19,9 +19,8 @@ const sessions = require("./libs/sessions");
 const cors = require("cors");
 app.use(
   cors({
-    // origin: [],
     origin: [
-      "https://anna-store-admin.herokuapp.com/",
+      "https://anna-store-admin.herokuapp.com",
       "https://f1anor.github.io",
       "http://localhost:3000",
       "http://127.0.0.1:3000",
