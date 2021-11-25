@@ -16,6 +16,25 @@ const requestIp = require("request-ip");
 // Подключение к базе
 const mongoose = require("./libs/mongoose");
 
+// Сессии
+
+app.use(
+  session({
+    secret: "justsomestuff",
+    store: new MongoStore({ mongooseConnection: mongoose.connection }),
+    cookie: {
+      sameSite: none,
+      maxAge: 60000000,
+      secure: true,
+    },
+    resave: true,
+    saveUninitialized: false,
+    ttl: 60 * 60 * 24 * 30,
+  })
+);
+
+//
+
 // Разрешение кросдоменных запросов
 const cors = require("cors");
 app.use(
@@ -42,23 +61,6 @@ const urlencodedParser = bodyParser.urlencoded({
   limit: "50mb",
   parameterLimit: "50000",
 });
-
-// Сессии
-
-app.use(
-  session({
-    secret: "justsomestuff",
-    store: new MongoStore({ mongooseConnection: mongoose.connection }),
-    key: "sid",
-    proxy: true, // add this when behind a reverse proxy, if you need secure cookies
-    cookie: {
-      secure: true,
-      maxAge: 5184000000, // 2 months
-    },
-  })
-);
-
-//
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cookieParser("loremIpsum"));
