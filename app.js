@@ -52,7 +52,7 @@ app.use(
     resave: false,
     saveUninitialized: true,
     expires: new Date(Date.now() + 60 * 60 * 24 * 7 * 1000),
-    cookie: {},
+    cookie: { sameSite: "none" },
     store: new MongoStore({ mongooseConnection: mongoose.connection }),
   })
 );
