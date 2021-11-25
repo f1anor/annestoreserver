@@ -37,14 +37,14 @@ app.use(
   session({
     secret: "justsomestuff",
     store: new MongoStore({ mongooseConnection: mongoose.connection }),
-    cookie: {
-      sameSite: none,
-      maxAge: 60000000,
-      secure: true,
-    },
     resave: true,
     saveUninitialized: false,
     ttl: 60 * 60 * 24 * 30,
+    cookie: {
+      // sameSite: "none",
+      maxAge: 60000000,
+      // secure: true,
+    },
   })
 );
 
