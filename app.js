@@ -50,12 +50,13 @@ const urlencodedParser = bodyParser.urlencoded({
 app.use(
   session({
     secret: "justsomestuff",
-    resave: false,
-    saveUninitialized: true,
-    expires: new Date(Date.now() + 60 * 60 * 24 * 7 * 1000),
-    proxy: true,
-    cookie: { secure: true },
     store: new MongoStore({ mongooseConnection: mongoose.connection }),
+    key: "sid",
+    proxy: true, // add this when behind a reverse proxy, if you need secure cookies
+    cookie: {
+      secure: true,
+      maxAge: 5184000000, // 2 months
+    },
   })
 );
 
