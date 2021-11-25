@@ -41,9 +41,9 @@ app.use(
     saveUninitialized: false,
     ttl: 60 * 60 * 24 * 30,
     cookie: {
-      // sameSite: "none",
+      sameSite: "none",
       maxAge: 60000000,
-      // secure: true,
+      secure: true,
     },
   })
 );
