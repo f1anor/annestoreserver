@@ -16,6 +16,20 @@ const requestIp = require("request-ip");
 // Подключение к базе
 const mongoose = require("./libs/mongoose");
 
+// Разрешение кросдоменных запросов
+const cors = require("cors");
+app.use(
+  cors({
+    credentials: true,
+    origin: [
+      "https://anna-store-admin.herokuapp.com",
+      "https://f1anor.github.io",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ],
+  })
+);
+
 // Сессии
 
 app.use(
@@ -34,20 +48,6 @@ app.use(
 );
 
 //
-
-// Разрешение кросдоменных запросов
-const cors = require("cors");
-app.use(
-  cors({
-    origin: [
-      "https://anna-store-admin.herokuapp.com",
-      "https://f1anor.github.io",
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-    ],
-    credentials: true,
-  })
-);
 
 // Отдаем статику
 
