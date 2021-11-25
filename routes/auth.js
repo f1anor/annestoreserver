@@ -9,11 +9,7 @@ const multer = require("multer");
 const upload = multer();
 const multerConfig = require("../config/multer");
 
-const {
-  getPass,
-  getNullImg,
-  getAvatarImgConvertParams,
-} = require("../utlis/utils");
+const { getPass, getAvatarImgConvertParams } = require("../utlis/utils");
 
 const {
   removeFilesFromFolder,
@@ -58,30 +54,44 @@ router.post(
   }
 );
 
+// Готово - Авторизация
 router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
-  async (req, res) => {
-    message = [];
-    const user = req.user;
-    await Admin.setVisit(user, Date.now()).catch((err) => {
-      message.push(err.message);
-      return;
-    });
+  async (req, res, next) => {
+    try {
+      const user = req.user;
 
-    if (message.length > 0) {
-      res.json({
-        status: 1,
-        message: message[0],
+      // Прописываем куку для ведения сессии
+      let type = 0;
+      if (!!user && user.hasOwnProperty("status")) {
+        type = 1;
+      } else if (!!user) {
+        type = 2;
+      }
+
+      req.session.date = Date.now();
+      req.session.type = type;
+      req.session.ip = req.clientIp;
+      req.session.platform = `${req.useragent.browser} на ${req.useragent.platform}`;
+      req.session.reffer = req.headers.referrer;
+
+      //
+
+      await Admin.setVisit(user, Date.now()).catch((err) => {
+        message.push(err.message);
+        return;
       });
-      return;
-    }
 
-    res.json({ status: 0, user });
+      res.json({ status: 0, user });
+    } catch (err) {
+      console.info(err);
+      return next(err.message);
+    }
   }
 );
 
-// FIXME: Переделать регистрацию
+// Готово - Регистрация
 router.post("/reg", async (req, res, next) => {
   try {
     const testCode = "563256";

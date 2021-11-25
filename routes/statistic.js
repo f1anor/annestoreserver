@@ -7,180 +7,198 @@ const Product = require("../models/product-model");
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
-  let { range = "week", time } = req.query;
+// Данные для графика о посетителях и заказах
+router.get("/", async (req, res, next) => {
+  try {
+    let { range = "week", time } = req.query;
 
-  const date = new Date(+time || Date.now());
-  !!time && date.setDate(date.getDate() + 1);
+    const date = new Date(+time || Date.now());
+    !!time && date.setDate(date.getDate() + 1);
 
-  const now = date.getTime();
+    const now = date.getTime();
 
-  const timeArr = [];
-  let sessions;
-  let orders;
+    const timeArr = [];
+    let sessions = await Session.getSessions();
+    let orders;
 
-  switch (range) {
-    case "day": {
-      date.setDate(date.getDate() - 1);
-      const period = {
-        min: now - (now - date.getTime()),
-        max: now,
-        firstHour: new Date(now - (now - date.getTime())).getHours(),
-      };
+    switch (range) {
+      case "day": {
+        date.setDate(date.getDate() - 1);
+        const period = {
+          min: now - (now - date.getTime()),
+          max: now,
+          firstHour: new Date(now - (now - date.getTime())).getHours(),
+        };
 
-      sessions = await Session.getSessions({
-        date: { $gte: period.min, $lte: period.max },
-      });
-      orders = await Order.getOrders({
-        creationDate: { $gte: period.min, $lte: period.max },
-      });
+        // Фильтруем по заданному времени
+        sessions = sessions
+          .map((item) => JSON.parse(item.session))
+          .filter(
+            (item) => +item.date >= period.min && +item.date <= period.max
+          );
 
-      for (let i = period.firstHour; i <= period.firstHour + 24; i++) {
-        const date = new Date(+time || Date.now());
-        !time && date.setDate(date.getDate() - 1);
-        let hour = i;
-        if (hour >= 24) {
-          hour = hour - 24;
-          date.setDate(date.getDate() + 1);
-        }
-
-        date.setHours(hour);
-        date.setMinutes(0);
-        date.setSeconds(0);
-
-        const min = date.getTime();
-        const max = date.getTime() + 3600000 - 1;
-
-        let visitors = 0;
-        let makedOrders = 0;
-
-        sessions.forEach((session) => {
-          if (session.date > min && session.date < max) visitors++;
+        orders = await Order.getOrders({
+          creationDate: { $gte: period.min, $lte: period.max },
         });
 
-        orders.forEach((order) => {
-          if (order.creationDate > min && order.creationDate < max)
-            makedOrders++;
-        });
+        for (let i = period.firstHour; i <= period.firstHour + 24; i++) {
+          const date = new Date(+time || Date.now());
+          !time && date.setDate(date.getDate() - 1);
+          let hour = i;
+          if (hour >= 24) {
+            hour = hour - 24;
+            date.setDate(date.getDate() + 1);
+          }
 
-        timeArr.push({
-          time: hour,
-          visitors,
-          makedOrders,
-        });
-      }
-      break;
-    }
-    case "week": {
-      const now = date.getTime();
-      date.setDate(date.getDate() - 7);
-      const period = {
-        min: now - (now - date.getTime()),
-        max: now,
-      };
-
-      sessions = await Session.getSessions({
-        date: { $gte: period.min, $lte: period.max },
-      });
-      orders = await Order.getOrders({
-        creationDate: { $gte: period.min, $lte: period.max },
-      });
-
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(+time || Date.now());
-        if (!time) {
-          date.setHours(0);
+          date.setHours(hour);
           date.setMinutes(0);
           date.setSeconds(0);
+
+          const min = date.getTime();
+          const max = date.getTime() + 3600000 - 1;
+
+          let visitors = 0;
+          let makedOrders = 0;
+
+          sessions.forEach((session) => {
+            if (session.date > min && session.date < max) visitors++;
+          });
+
+          orders.forEach((order) => {
+            if (order.creationDate > min && order.creationDate < max)
+              makedOrders++;
+          });
+
+          timeArr.push({
+            time: hour,
+            visitors,
+            makedOrders,
+          });
         }
-        date.setDate(date.getDate() - i);
-
-        const day = date.toLocaleString("ru", {
-          weekday: "short",
-        });
-
-        const min = date.getTime();
-        const max = min + 86400000 - 1;
-
-        let visitors = 0;
-        let makedOrders = 0;
-
-        sessions.forEach((session) => {
-          if (session.date > min && session.date < max) visitors++;
-        });
-
-        orders.forEach((order) => {
-          if (order.creationDate > min && order.creationDate < max)
-            makedOrders++;
-        });
-
-        timeArr.push({
-          time: day,
-          visitors,
-          makedOrders,
-        });
+        break;
       }
-      timeArr.reverse();
-      break;
-    }
-    case "all": {
-      const now = date.getTime();
-      date.setDate(date.getDate() - 14);
-      const period = {
-        min: now - (now - date.getTime()),
-        max: now,
-      };
+      case "week": {
+        const now = date.getTime();
+        date.setDate(date.getDate() - 7);
+        const period = {
+          min: now - (now - date.getTime()),
+          max: now,
+        };
 
-      sessions = await Session.getSessions({
-        date: { $gte: period.min, $lte: period.max },
-      });
-      orders = await Order.getOrders({
-        creationDate: { $gte: period.min, $lte: period.max },
-      });
+        // Фильтруем по заданному времени
+        sessions = sessions
+          .map((item) => JSON.parse(item.session))
+          .filter(
+            (item) => +item.date >= period.min && +item.date <= period.max
+          );
 
-      for (let i = 0; i < 14; i++) {
-        const date = new Date(+time || Date.now());
-        if (!time) {
-          date.setHours(0);
-          date.setMinutes(0);
-          date.setSeconds(0);
+        orders = await Order.getOrders({
+          creationDate: { $gte: period.min, $lte: period.max },
+        });
+
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(+time || Date.now());
+          if (!time) {
+            date.setHours(0);
+            date.setMinutes(0);
+            date.setSeconds(0);
+          }
+          date.setDate(date.getDate() - i);
+
+          const day = date.toLocaleString("ru", {
+            weekday: "short",
+          });
+
+          const min = date.getTime();
+          const max = min + 86400000 - 1;
+
+          let visitors = 0;
+          let makedOrders = 0;
+
+          sessions.forEach((session) => {
+            if (session.date > min && session.date < max) visitors++;
+          });
+
+          orders.forEach((order) => {
+            if (order.creationDate > min && order.creationDate < max)
+              makedOrders++;
+          });
+
+          timeArr.push({
+            time: day,
+            visitors,
+            makedOrders,
+          });
         }
-        date.setDate(date.getDate() - i);
-
-        const day = date.toLocaleString("ru", {
-          weekday: "short",
-        });
-
-        const min = date.getTime();
-        const max = min + 86400000 - 1;
-
-        let visitors = 0;
-        let makedOrders = 0;
-
-        sessions.forEach((session) => {
-          if (session.date > min && session.date < max) visitors++;
-        });
-
-        orders.forEach((order) => {
-          if (order.creationDate > min && order.creationDate < max)
-            makedOrders++;
-        });
-
-        timeArr.push({
-          time: day,
-          visitors,
-          makedOrders,
-        });
+        timeArr.reverse();
+        break;
       }
-      timeArr.reverse();
-      break;
+      case "all": {
+        const now = date.getTime();
+        date.setDate(date.getDate() - 14);
+        const period = {
+          min: now - (now - date.getTime()),
+          max: now,
+        };
+
+        // Фильтруем по заданному времени
+        sessions = sessions
+          .map((item) => JSON.parse(item.session))
+          .filter(
+            (item) => +item.date >= period.min && +item.date <= period.max
+          );
+
+        orders = await Order.getOrders({
+          creationDate: { $gte: period.min, $lte: period.max },
+        });
+
+        for (let i = 0; i < 14; i++) {
+          const date = new Date(+time || Date.now());
+          if (!time) {
+            date.setHours(0);
+            date.setMinutes(0);
+            date.setSeconds(0);
+          }
+          date.setDate(date.getDate() - i);
+
+          const day = date.toLocaleString("ru", {
+            weekday: "short",
+          });
+
+          const min = date.getTime();
+          const max = min + 86400000 - 1;
+
+          let visitors = 0;
+          let makedOrders = 0;
+
+          sessions.forEach((session) => {
+            if (session.date > min && session.date < max) visitors++;
+          });
+
+          orders.forEach((order) => {
+            if (order.creationDate > min && order.creationDate < max)
+              makedOrders++;
+          });
+
+          timeArr.push({
+            time: day,
+            visitors,
+            makedOrders,
+          });
+        }
+        timeArr.reverse();
+        break;
+      }
     }
+
+    res.json({
+      status: 0,
+      data: timeArr,
+    });
+  } catch (err) {
+    console.info(err);
+    return next(err.message);
   }
-
-  res.json({
-    status: 0,
-    data: timeArr,
-  });
 });
 
 // Получить количество всех пользователей. Посчитать прирост за неделю в %
@@ -355,7 +373,7 @@ router.get("/sessions/:page", async (req, res, next) => {
 
     res.json({
       status: 0,
-      sessions: sessionsOnPage,
+      sessions: sessionsOnPage.map((item) => JSON.parse(item.session)),
       totalCount: sessions.length,
     });
   } catch (err) {

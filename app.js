@@ -1,7 +1,10 @@
 "use strict";
 
 const express = require("express");
+const session = require("express-session");
 const app = express();
+
+const MongoStore = require("connect-mongo")(session);
 
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
@@ -11,9 +14,6 @@ const requestIp = require("request-ip");
 
 // Подключение к базе
 const mongoose = require("./libs/mongoose");
-
-// Работа с сессиями
-const sessions = require("./libs/sessions");
 
 // Разрешение кросдоменных запросов
 const cors = require("cors");
@@ -44,6 +44,21 @@ const urlencodedParser = bodyParser.urlencoded({
   parameterLimit: "50000",
 });
 
+// Сессии
+
+app.use(
+  session({
+    secret: "justsomestuff",
+    resave: false,
+    saveUninitialized: true,
+    expires: new Date(Date.now() + 60 * 60 * 24 * 7 * 1000),
+    cookie: {},
+    store: new MongoStore({ mongooseConnection: mongoose.connection }),
+  })
+);
+
+//
+
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cookieParser("loremIpsum"));
 
@@ -66,8 +81,6 @@ app.use((req, res, next) => {
 
 // Роутер
 app.use("/api/1.0/auth", require("./routes/auth"));
-app.use(sessions);
-
 app.use("/api/1.0/statistic", require("./routes/statistic"));
 app.use("/api/1.0/category", require("./routes/category"));
 app.use("/api/1.0/comments", require("./routes/comments"));
@@ -88,5 +101,5 @@ app.use((err, req, res, next) => {
 // Запускаем сервер
 
 app.listen(PORT, () => {
-  console.info("Server start on port 3001");
+  console.info(`Server start on port ${PORT}`);
 });
