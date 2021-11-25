@@ -3,7 +3,7 @@
 const express = require("express");
 const session = require("express-session");
 const app = express();
-app.set("trust proxy", 1);
+app.set("trust proxy");
 
 const MongoStore = require("connect-mongo")(session);
 
@@ -30,25 +30,12 @@ app.use(
   })
 );
 
-app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin,X-Requested-With,Content-Type,Accept,content-type,application/json"
-  );
-  next();
-});
-
 // Отдаем статику
 
 app.use(express.static("public"));
 
 // Авторизация через PassportJS
 const passport = require("passport");
-const Session = require("./models/session-model");
-const { addUser } = require("./models/user-model");
 
 const urlencodedParser = bodyParser.urlencoded({
   extended: true,
