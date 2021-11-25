@@ -53,6 +53,7 @@ app.use(
     resave: false,
     saveUninitialized: true,
     expires: new Date(Date.now() + 60 * 60 * 24 * 7 * 1000),
+    proxy: true,
     cookie: { sameSite: "none", domain: "heroku.com" },
     store: new MongoStore({ mongooseConnection: mongoose.connection }),
   })
