@@ -367,10 +367,13 @@ router.get("/platform", async (req, res, next) => {
       status: 0,
       platformStatistic: {
         global: {
-          Desktop:
-            +(type.desktop * 100) / (type.desktop + type.mobile).toFixed(1),
-          Mobile:
-            +(type.mobile * 100) / (type.desktop + type.mobile).toFixed(1),
+          Desktop: +(
+            (type.desktop * 100) /
+            (type.desktop + type.mobile)
+          ).toFixed(1),
+          Mobile: +((type.mobile * 100) / (type.desktop + type.mobile)).toFixed(
+            1
+          ),
         },
         details,
       },
