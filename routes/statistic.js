@@ -327,14 +327,17 @@ router.get("/platform", async (req, res, next) => {
 
     // Получаем все сессии из базы
     const sessions = await Session.getSessions();
+
     // Перебираем сессии и считаем все платформы
-    sessions.forEach((session) => {
-      if (platforms.hasOwnProperty(session.platform)) {
-        platforms[session.platform] += 1;
-      } else {
-        platforms[session.platform] = 1;
-      }
-    });
+    sessions
+      .map((item) => JSON.parse(item.session))
+      .forEach((session) => {
+        if (platforms.hasOwnProperty(session.platform)) {
+          platforms[session.platform] += 1;
+        } else {
+          platforms[session.platform] = 1;
+        }
+      });
 
     // Сумма всех заходов на всех платформах
     const sum = Object.values(platforms).reduce((prev, next) => prev + next, 0);
