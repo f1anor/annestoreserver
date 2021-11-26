@@ -389,13 +389,15 @@ router.get("/sessions/:page", async (req, res, next) => {
   try {
     const { page } = req.params;
 
-    const sessions = await Session.getSessions();
+    const sessions = (await Session.getSessions())
+      .map((item) => JSON.parse(item.session))
+      .sort((a, b) => b.date - a.date);
 
     const sessionsOnPage = pagination(sessions, page, 4);
 
     res.json({
       status: 0,
-      sessions: sessionsOnPage.map((item) => JSON.parse(item.session)),
+      sessions: sessionsOnPage,
       totalCount: sessions.length,
     });
   } catch (err) {
