@@ -324,6 +324,10 @@ router.get("/platform", async (req, res, next) => {
   try {
     // Здесь будут все платформы с количеством заходов в каждую
     const platforms = {};
+    const type = {
+      mobile: 0,
+      desktop: 0,
+    };
 
     // Получаем все сессии из базы
     const sessions = await Session.getSessions();
@@ -332,6 +336,16 @@ router.get("/platform", async (req, res, next) => {
     sessions
       .map((item) => JSON.parse(item.session))
       .forEach((session) => {
+        if (
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            session.platform
+          )
+        ) {
+          type.mobile += 1;
+        } else {
+          type.desktop += 1;
+        }
+
         if (platforms.hasOwnProperty(session.platform)) {
           platforms[session.platform] += 1;
         } else {
@@ -353,8 +367,8 @@ router.get("/platform", async (req, res, next) => {
       status: 0,
       platformStatistic: {
         global: {
-          Desktop: 30,
-          Mobile: 70,
+          Desktop: (type.desktop * 100) / (type.desktop + type.mobile),
+          Mobile: (type.mobile * 100) / (type.desktop + type.mobile),
         },
         details,
       },
